@@ -187,7 +187,7 @@ function defaultState(){
     nodes:DEFAULT_NODES.map(n=>({id:n.id,x:n.x,y:n.y,w:n.w,title:n.t,badge:n.badge||'',color:n.c,human:!!n.human,ins:n.ins.map(a=>({name:a[0],type:a[1]})),outs:n.outs.map(a=>({name:a[0],type:a[1]})),widgets:(n.w_||[]).map(w=>({k:w[0],v:w[1]}))})),
     wires:DEFAULT_WIRES.map((w,i)=>({id:'w'+i,from:[w[0],w[1]],to:[w[2],w[3]],kind:w[4]==='fb'?'fb':'',flow:SPINE.has(w[0]+'>'+w[2])?3:(w[4]==='fb'?1:2)})),
     notes:DEFAULT_NOTES.map((n,i)=>({id:'n'+i,x:n.x,y:n.y,w:n.w,html:n.html})),
-    view:{x:40,y:80,k:0.5}
+    view:{x:40,y:80,k:0.5,flow:true}
   };
 }
 let S; try{const raw=localStorage.getItem(LS); S=raw?JSON.parse(raw):null;}catch(e){S=null}
@@ -265,7 +265,7 @@ function draw(){
   svg.querySelectorAll('.hit').forEach(p=>p.addEventListener('pointerdown',e=>{e.stopPropagation();select('wire',p.dataset.id)}));
 }
 let sel_={type:null,id:null};
-let flowOn=!!(S.view&&S.view.flow);
+let flowOn=!(S.view&&S.view.flow===false);
 function setFlow(v){flowOn=v;S.view.flow=v;document.getElementById('flow').classList.toggle('on',v);save();draw();}
 function select(type,id){sel_={type,id};document.querySelectorAll('.sel').forEach(e=>e.classList.remove('sel'));document.querySelectorAll('.node').forEach(e=>e.style.zIndex=3);if(type&&els[id]){els[id].classList.add('sel');if(type==='node')els[id].style.zIndex=5}if(type==='wire'||type===null)draw();}
 function deleteNode(id){snap();S.nodes=S.nodes.filter(n=>n.id!==id);S.wires=S.wires.filter(w=>w.from[0]!==id&&w.to[0]!==id);sel_={type:null};save();build();toast('Node deleted');}
