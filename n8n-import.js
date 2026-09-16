@@ -53,7 +53,7 @@ function widgetsOf(n,c){
 }
 
 // ---- one workflow → nodes, wires, notes inside a group. Returns the group's rect.
-function layoutWorkflow(wf,offY,ids,kitId){
+function layoutWorkflow(wf,offY,ids,kitId,offX){offX=offX||0;
   const nodes=[],wires=[],notes=[];
   const real=wf.nodes.filter(n=>!/stickyNote$/.test(n.type));
   const minx=Math.min(...wf.nodes.map(n=>n.position[0])),miny=Math.min(...wf.nodes.map(n=>n.position[1]));
@@ -61,12 +61,12 @@ function layoutWorkflow(wf,offY,ids,kitId){
   for(const n of real){
     const c=classify(n,kitId);const id='w'+ids.size;ids.set(wf.id+'|'+n.name,id);
     const outs=outsOf(n,c,wf).map(a=>({name:a[0],type:a[1]}));
-    const ins=c.trig?[]:[{name:'in',type:'data'}];
-    nodes.push({id,x:Math.round((n.position[0]-minx)*SX),y:Math.round((n.position[1]-miny)*SY)+offY,w:NODE_W,title:n.name,badge:short(n.type),color:c.color,human:c.human,ins,outs,widgets:widgetsOf(n,c),_cls:c,_wf:wf.name,_name:n.name});
+    const ins=c.trig?(/executeWorkflowTrigger$/.test(n.type)?[{name:'from a line',type:'gate'}]:[]):[{name:'in',type:'data'}];
+    nodes.push({id,x:Math.round((n.position[0]-minx)*SX)+offX,y:Math.round((n.position[1]-miny)*SY)+offY,w:NODE_W,title:n.name,badge:short(n.type),color:c.color,human:c.human,ins,outs,widgets:widgetsOf(n,c),_cls:c,_wf:wf.name,_name:n.name});
   }
   for(const n of wf.nodes.filter(n=>/stickyNote$/.test(n.type))){
     const p=n.parameters||{};const html=String(p.content||'').replace(/^##\s*(.*)$/m,'<b>$1</b>').replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/`(.+?)`/g,'<code>$1</code>').replace(/\n+/g,'<br>');
-    notes.push({id:'nt'+ids.size+'_'+notes.length,x:Math.round((n.position[0]-minx)*SX),y:Math.round((n.position[1]-miny)*SY)+offY,w:Math.min(640,Math.round((p.width||400)*0.9)),html});
+    notes.push({id:'nt'+ids.size+'_'+notes.length,x:Math.round((n.position[0]-minx)*SX)+offX,y:Math.round((n.position[1]-miny)*SY)+offY,w:Math.min(640,Math.round((p.width||400)*0.9)),html});
   }
   const byId=Object.fromEntries(nodes.map(n=>[n.id,n]));
   for(const [src,c] of Object.entries(wf.connections||{})){
@@ -109,7 +109,9 @@ function importN8n(files,opts){
   const reg=regs[0]||null;
   const kitId=opts.kitId||(wfs.find(w=>/transparency kit$/i.test(w.name||''))||{}).id||null;
   const ids=new Map();const groups=[],nodes=[],wires=[],notes=[];let offY=0;
+  const auditWf=wfs.find(w=>/audit view/i.test(w.name||''));
   for(const wf of wfs){
+    if(wf===auditWf)continue;
     const L=layoutWorkflow(wf,offY,ids,kitId);
     groups.push({id:'g_'+groups.length,x:L.rect.x,y:L.rect.y,w:L.rect.w,h:L.rect.h,title:(wf.name||'workflow')+(wf.active===false?'  ·  inactive':wf.active?'  ·  active':''),color:'rgba(255,255,255,.04)'});
     nodes.push(...L.nodes);wires.push(...L.wires);notes.push(...L.notes);offY=L.rect.y+L.rect.h+GAP_Y;
@@ -117,6 +119,18 @@ function importN8n(files,opts){
   // registry overlay: paint generators with their path status, wire the uncovered ones to the registry
   const maxX=Math.max(...groups.map(g=>g.x+g.w));const aud=auditorBlock(reg,maxX+260,groups[0].y+70,ids);
   nodes.push(...aud.nodes);groups.push({id:'g_auditor',x:aud.rect.x,y:aud.rect.y,w:aud.rect.w,h:aud.rect.h,title:'Auditor · what the EU reads',color:'rgba(84,160,255,.07)'});
+  // the audit view reads the auditor's files and renders the page: place it under the block, wire every block into "Collect files"
+  if(auditWf){const L=layoutWorkflow(auditWf,aud.rect.y+aud.rect.h+170,ids,kitId,aud.rect.x+40);
+    groups.push({id:'g_audit',x:L.rect.x,y:L.rect.y,w:L.rect.w,h:L.rect.h,title:(auditWf.name||'audit view')+'  ·  renders the blocks above as one page',color:'rgba(84,160,255,.05)'});
+    nodes.push(...L.nodes);wires.push(...L.wires);notes.push(...L.notes);
+    const collect=L.nodes.find(n=>/collect/i.test(n._name))||L.nodes[1];
+    if(collect){for(const a of aud.nodes){a.outs.push({name:'file',type:'data'});wires.push({id:'av_'+wires.length,from:[a.id,0],to:[collect.id,0],kind:'',flow:1})}}}
+  // embedding: a line's call to the kit enters "Called by another workflow" and comes back from "Return to caller"
+  const kitEntry=nodes.find(n=>n._name==='Called by another workflow'&&/transparency kit$/i.test(n._wf||''));
+  const kitReturn=nodes.find(n=>n._name==='Return to caller'&&/transparency kit$/i.test(n._wf||''));
+  for(const n of nodes){if(!(n._cls&&n._cls.isKit))continue;
+    if(kitEntry){wires.push({id:'in_'+wires.length,from:[n.id,0],to:[kitEntry.id,0],kind:'',flow:3})}
+    if(kitReturn){n.ins.push({name:'decision',type:'gate'});wires.push({id:'ret_'+wires.length,from:[kitReturn.id,0],to:[n.id,n.ins.length-1],kind:'fb',flow:3})}}
   if(reg){for(const r of reg.systems||[]){if(r.source!=='workflow node')continue;const n=nodes.find(n=>n._wf===r.workflow&&n._name===r.system);if(!n)continue;
     n.badge=r.path_status;n.color=STATUS_COLOR[r.path_status]||n.color;
     if(r.path_status==='uncovered'||r.path_status==='likeness'){n.outs.push({name:'uncovered',type:'alert'});wires.push({id:'al_'+wires.length,from:[n.id,n.outs.length-1],to:['aud_reg',1],kind:'',flow:3})}
@@ -128,7 +142,8 @@ function importN8n(files,opts){
   snap();S.groups=groups;S.nodes=nodes;S.wires=wires;S.notes=notes;
   // camera slots: 1 = everything, then one per group, last = the auditor
   const r=vp.getBoundingClientRect();const slot=g=>({cx:g.x+g.w/2,cy:g.y+g.h/2,k:Math.min(1,Math.max(.12,Math.min(r.width/(g.w+120),r.height/(g.h+160))))});
-  S.slots={1:'fit'};let s=2;for(const g of groups.slice(0,-1)){if(s>4)break;S.slots[s++]=slot(g)}S.slots[5]=slot(groups[groups.length-1]);
+  const ga=groups.find(g=>g.id==='g_auditor'),gv=groups.find(g=>g.id==='g_audit');const right=gv?{x:Math.min(ga.x,gv.x),y:ga.y,w:Math.max(ga.x+ga.w,gv.x+gv.w)-Math.min(ga.x,gv.x),h:gv.y+gv.h-ga.y}:ga;
+  S.slots={1:'fit'};let s=2;for(const g of groups){if(g.id==='g_auditor'||g.id==='g_audit')continue;if(s>4)break;S.slots[s++]=slot(g)}S.slots[5]=slot(right);
   save();build();fit();renderSlots();toast(`Imported ${wfs.length} workflow${wfs.length>1?'s':''}${reg?' + registry':''}`);return true;
 }
 
