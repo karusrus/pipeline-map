@@ -50,12 +50,24 @@ Types are just labels on sockets; edit the `T` map at the top of the script to d
 - `index.html` — the whole tool, ~40 KB, self-contained. Open it locally or host it anywhere static.
 - `docs/` — preview GIF, MP4 and screenshots used in this README.
 
+## Import from n8n
+
+**Import n8n** (or drop the files on the canvas) takes one or more n8n workflow JSON exports and lays them out: positions from n8n, one group per workflow, sockets from each node's outputs (IF → true/false, Loop → done/loop), wire colours from what the node does, sticky notes as notes. Triggers, generators, human gates, publishing nodes and sub-workflow calls get their own colours.
+
+Add the `registry.json` written by the [AI Act Transparency Kit](https://github.com/karusrus/transparency-kit) and the map paints every generator with its **path status** (`disclosed`, `editorial`, `verify`, `uncovered`, `likeness`, `internal`), wires the uncovered ones in red to an **Auditor** block on the right — what the EU reads: awaiting a human, the AI-systems registry, synthetic media and deep fakes, generated text, the approval log — and fills its counters from the registry. Five camera slots are set automatically: everything, then one per workflow, the auditor last.
+
+Live: [karusrus.github.io/pipeline-map/?import=docs/transparency-kit.bundle.json](https://karusrus.github.io/pipeline-map/?import=docs/transparency-kit.bundle.json) — four workflows and the registry of the kit's demo instance. Query parameters: `import=<url>`, `slot=<1–5>`, `pres=1` (no chrome), `flow=0`.
+
+![Imported n8n workflows with the Auditor block](docs/transparency-kit-map.gif)
+
+`docs/record.mjs` records the walkthrough through the camera slots with headless Chrome (DevTools screencast) and writes an MP4, a GIF and one still per slot — no screen recorder.
+
 ## Roadmap, if anyone asks
 
-- Import a workflow JSON from n8n or ComfyUI and lay it out automatically.
-- Export the walkthrough as MP4 without a screen recorder.
+- Import ComfyUI workflow JSON the same way.
+- Read a live n8n instance through its API instead of exported files.
 
-Neither exists yet. If you would use them, open an issue and say so — that is the only thing that will get them built.
+If you would use them, open an issue and say so — that is the only thing that will get them built.
 
 ## Licence
 

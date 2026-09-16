@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 :root{--canvas:#1e1e1e;--grid:#2a2a2a;--node:#353535;--node-edge:#161616;--text:#d9d9d9;--muted:#9a9a9a;--widget:#222;--accent:#FFD166;--panel:#2a2a2a;--panel-edge:#0f0f0f;
-  --t-data:#6BCB77;--t-brief:#FFD166;--t-creative:#FF9F43;--t-video:#F368E0;--t-brand:#B8B5FF;--t-gate:#54A0FF;--t-fb:#A29BFE}
+  --t-data:#6BCB77;--t-brief:#FFD166;--t-creative:#FF9F43;--t-video:#F368E0;--t-brand:#B8B5FF;--t-gate:#54A0FF;--t-fb:#A29BFE;--t-alert:#FF5252}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:var(--text);font-family:"IBM Plex Sans","DejaVu Sans",Arial,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
 #app{position:fixed;inset:0;background:var(--canvas)}
@@ -99,9 +99,9 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:va
     <button class="btn warn" id="reset" title="Discard your edits and reload the original draft">Reset draft</button>
   </div>
   <div id="slots" title="Camera slots: click to fly there, Shift+click (or Shift+1–5) to save the current view"></div>
-  <div id="hint"><b>Pan</b> drag the canvas · <b>Zoom</b> wheel or pinch · <b>Move</b> drag a node title or group title (a group carries its nodes) · <b>Rename</b> double-click any text · <b>Connect</b> drag from an output dot to an input dot · <b>Delete</b> select a node, note or wire, press Delete · <b>Undo</b> Ctrl+Z · <b>Flow</b> animates the traffic; select a wire and press 1, 2 or 3 to set how much runs through it · <b>Camera</b> keys 1–5 fly to a saved view, Shift+1–5 save the current one · <b>H</b> hides this chrome for recording · sample: an ad-creative production pipeline for a subscription app · by <a href="https://karusrus.github.io" style="color:#ddd">Ruslan Karymov</a></div>
+  <div id="hint"><b>Pan</b> drag the canvas · <b>Zoom</b> wheel or pinch · <b>Move</b> drag a node title or group title (a group carries its nodes) · <b>Rename</b> double-click any text · <b>Connect</b> drag from an output dot to an input dot · <b>Delete</b> select a node, note or wire, press Delete · <b>Undo</b> Ctrl+Z · <b>Flow</b> animates the traffic; select a wire and press 1, 2 or 3 to set how much runs through it · <b>Camera</b> keys 1–5 fly to a saved view, Shift+1–5 save the current one · <b>H</b> hides this chrome for recording · <b>Import n8n</b> lays out n8n workflow JSON (drop the files on the canvas; add the Transparency Kit registry to paint statuses) · sample: an ad-creative production pipeline for a subscription app · by <a href="https://karusrus.github.io" style="color:#ddd">Ruslan Karymov</a></div>
   <div id="legend">
-    <span><i style="background:var(--t-data)"></i>data</span><span><i style="background:var(--t-brief)"></i>brief / copy</span><span><i style="background:var(--t-creative)"></i>static</span><span><i style="background:var(--t-video)"></i>video</span><span><i style="background:var(--t-brand)"></i>brand</span><span><i style="background:var(--t-gate)"></i>gate</span><span><i style="background:var(--t-fb);height:0;border-top:2px dashed var(--t-fb)"></i>feedback</span>
+    <span><i style="background:var(--t-data)"></i>data</span><span><i style="background:var(--t-brief)"></i>brief / copy</span><span><i style="background:var(--t-creative)"></i>static</span><span><i style="background:var(--t-video)"></i>video</span><span><i style="background:var(--t-brand)"></i>brand</span><span><i style="background:var(--t-gate)"></i>gate</span><span><i style="background:var(--t-fb);height:0;border-top:2px dashed var(--t-fb)"></i>feedback</span><span><i style="background:var(--t-alert)"></i>uncovered</span>
   </div>
   <div id="toast"></div>
   <div id="modal"><div class="box"><div><b>Layout as JSON</b> — copy it to keep a version, or paste one here and import.</div><textarea id="jsontext" spellcheck="false"></textarea><div class="actions"><button class="btn" id="copyjson">Copy</button><button class="btn" id="importjson">Import</button><button class="btn" id="closejson">Close</button></div></div></div>
@@ -176,7 +176,7 @@ const DEFAULT_WIRES=[
  ['brandqa',1,'compose',0,'fb'],
 ];
 const DEFAULT_NOTES=[{"x": 930, "y": 1150, "w": 640, "html": "<b>Round 1</b> runs the static branch only — cheapest way to prove a hook and a result framing. <b>Round 2</b> switches the video branch on for winners: proven hook → script → voice → talent. Real creators get the brief, not the concept. The image-gen branch stays behind the brand LoRA so volume never drifts the brand."}, {"x": 450, "y": 1070, "w": 420, "html": "<b>Where ComfyUI actually sits.</b> ComfyUI executes a DAG once per queue — it is a render engine, not a workflow manager. The orchestrator (n8n or a Python service) owns the loop: it reads Airtable and Sigma, calls agents, and submits render jobs to ComfyUI over <code>POST /prompt</code>, then collects outputs from <code>/history</code>. The image branch (LoRA → KSampler) and video generation are ComfyUI workers; everything else is API nodes in the orchestrator."}, {"x": 930, "y": 1330, "w": 960, "html": "<b>Human by exception, not by default.</b> Five gates that were people in v1 are agents here — each carries a confidence score and a rubric. Anything under threshold, any policy flag, any new geo or concept, and any spend above cap goes to one Escalation Inbox with a 4-hour SLA; unanswered means hold, not ship. Every human decision becomes training data: Agent Evals measures agreement on a holdout weekly, raises the auto-approve share when agents match people, and hands a gate back to a person after two bad weeks."}];
-const T={data:'#6BCB77',brief:'#FFD166',creative:'#FF9F43',video:'#F368E0',brand:'#B8B5FF',gate:'#54A0FF',fb:'#A29BFE'};
+const T={data:'#6BCB77',brief:'#FFD166',creative:'#FF9F43',video:'#F368E0',brand:'#B8B5FF',gate:'#54A0FF',fb:'#A29BFE',alert:'#FF5252'};
 C.generic='#444';
 const ROW=24,TITLE=32,PAD=6;
 const LS='pipeline-map-v1';
@@ -355,4 +355,5 @@ build();applyView();document.getElementById('flow').classList.toggle('on',flowOn
 if(!localStorage.getItem||!(()=>{try{return localStorage.getItem(LS)}catch(e){return null}})())fit();
 window.addEventListener('resize',()=>{});
 </script>
+<script src="n8n-import.js"></script>
 </body></html>
