@@ -92,7 +92,7 @@ function auditorBlock(reg,x,y,ids){
     mk('aud_reg','1 · AI-systems registry','voluntary · Art. 4',[{name:'from every workflow',type:'data'},{name:'uncovered',type:'alert'}],[['systems',st.length],['uncovered',cnt('uncovered')+cnt('likeness')],['need a decision',cnt('editorial')+cnt('verify')],['workflows scanned',reg?reg.instance_workflows:'—']],150),
     mk('aud_media','2 · Synthetic media & deep fakes','Art. 50(4) §1 · 50(2)',[{name:'manifests',type:'creative'}],[['assets',a.media??'—'],['needs','label + consent + provenance']],360),
     mk('aud_text','3 · Generated text','Art. 50(4) §2',[{name:'manifests',type:'brief'}],[['texts',a.texts??'—'],['exception','named editor']],520),
-    mk('aud_log','4 · Approval log','voluntary · Art. 26(6)-style',[{name:'decisions',type:'gate'}],[['decisions',a.approvals??'—'],['keeps','who · what · when · why']],660),
+    mk('aud_log','4 · Approval log','voluntary · Art. 26(6)-style',[{name:'decisions',type:'gate'}],[['decisions',a.approvals??'—'],['ledger',a.chain_ok===false?'chain BROKEN':a.chain_ok?'append-only · chain verified':'Postgres, append-only']],660),
   ];
   return {nodes,rect:{x:x-40,y:y-70,w:440,h:860}};
 }
@@ -124,7 +124,7 @@ function importN8n(files,opts){
   if(auditWf){const L=layoutWorkflow(auditWf,aud.rect.y+aud.rect.h+170,ids,kitId,aud.rect.x+40);
     groups.push({id:'g_audit',x:L.rect.x,y:L.rect.y,w:L.rect.w,h:L.rect.h,title:(auditWf.name||'audit view')+'  ·  renders the blocks above as one page',color:'rgba(84,160,255,.05)'});
     nodes.push(...L.nodes);wires.push(...L.wires);notes.push(...L.notes);
-    const collect=L.nodes.find(n=>/collect/i.test(n._name))||L.nodes[1];
+    const collect=L.nodes.find(n=>/collect|ledger/i.test(n._name))||L.nodes[1];
     if(collect){for(const a of aud.nodes){a.outs.push({name:'file',type:'data'});wires.push({id:'av_'+wires.length,from:[a.id,0],to:[collect.id,0],kind:'',flow:1})}}}
   // embedding: a line's call to the kit enters "Called by another workflow" and comes back from "Return to caller"
   const kitEntry=nodes.find(n=>n._name==='Called by another workflow'&&/transparency kit$/i.test(n._wf||''));
@@ -137,7 +137,7 @@ function importN8n(files,opts){
     if(r.path_status==='uncovered'||r.path_status==='likeness'){n.outs.push({name:'uncovered',type:'alert'});wires.push({id:'al_'+wires.length,from:[n.id,n.outs.length-1],to:['aud_reg',1],kind:'',flow:3})}
     n.widgets=[{k:'status',v:r.path_status}].concat(n.widgets).slice(0,4);}}
   const wireTo=(name,to,inIdx)=>{const n=nodes.find(n=>n._name===name&&/transparency kit$/i.test(n._wf||''));if(n){wires.push({id:'au_'+wires.length,from:[n.id,0],to:[to,inIdx||0],kind:'',flow:3})}};
-  wireTo('Write manifest + inbox','aud_wait');wireTo('Write manifest + inbox','aud_media');wireTo('Write manifest + inbox','aud_text');wireTo('Write approval + manifest','aud_log');wireTo('Write registry','aud_reg',0);
+  wireTo('Store asset','aud_wait');wireTo('Store asset','aud_media');wireTo('Store asset','aud_text');wireTo('Record decision','aud_log');wireTo('Snapshot registry','aud_reg',0);
   for(const n of nodes)if(n._cls&&n._cls.isKit)wires.push({id:'ak_'+wires.length,from:[n.id,0],to:['aud_reg',0],kind:'',flow:2});
   for(const n of nodes){delete n._cls;delete n._wf;delete n._name}
   snap();S.groups=groups;S.nodes=nodes;S.wires=wires;S.notes=notes;
