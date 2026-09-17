@@ -3,13 +3,13 @@
 // positions come from n8n, sockets from the node's outputs, colours from what the node does, and the registry's
 // path analysis paints every generator with its status and wires it to the Auditor block.
 (function(){
-const AI_TYPE=/langchain|openai|anthropic|ollama|gemini|mistral|huggingface|groq|cohere|deepseek|perplexity|xai|elevenlabs|replicate|stability|bedrock|vertex|azureopenai|heygen|midjourney|runway|bannerbear|kokoro/i;
+const AI_TYPE=/hume|emotion|biometric|rekognition|langchain|openai|anthropic|ollama|gemini|mistral|huggingface|groq|cohere|deepseek|perplexity|xai|elevenlabs|replicate|stability|bedrock|vertex|azureopenai|heygen|midjourney|runway|bannerbear|kokoro/i;
 const AI_HOST=/api\.openai\.com|api\.anthropic\.com|:11434|:8880|kokoro|api\.elevenlabs\.io|api\.replicate\.com|api\.stability\.ai|generativelanguage\.googleapis|api\.mistral\.ai|api\.heygen\.com|api\.bannerbear\.com|api\.groq\.com|api\.cohere|api\.deepseek\.com|api\.x\.ai|openrouter\.ai|api\.d-id\.com|api\.synthesia\.io/i;
 const AUDIO=/elevenlabs|kokoro|tts|voice|speech|audio/i, VIDEO=/heygen|runway|synthesia|d-id|video/i, IMAGE=/midjourney|stability|replicate|bannerbear|image|dall/i;
 const EXIT_TYPE=/linkedIn|twitter|facebook|instagram|youTube|tiktok|wordpress|ghost|webflow|contentful|mailchimp|brevo|sendinblue|sendgrid|mailgun|emailSend|gmail|microsoftOutlook|telegram|whatsApp|twilio|messageBird|discord|reddit|medium|hubspot|activeCampaign|klaviyo/i;
 const GATE_TYPE=/n8n-nodes-base\.form$|n8n-nodes-base\.wait$/, GATE_OP=/sendAndWait|approval/i;
 const TRIGGER=/Trigger$|n8n-nodes-base\.webhook$|n8n-nodes-base\.formTrigger$|manualTrigger|scheduleTrigger/;
-const STATUS_COLOR={uncovered:'#8c1d1d',likeness:'#8c1d1d',editorial:'#8a5a00',verify:'#8a5a00',disclosed:'#1f6b3a',internal:'#444'};
+const STATUS_COLOR={uncovered:'#8c1d1d',likeness:'#8c1d1d',inform:'#8c1d1d',editorial:'#8a5a00',verify:'#8a5a00',chatbot:'#8a5a00',disclosed:'#1f6b3a',informed:'#1f6b3a',internal:'#444'};
 const SX=1.2,SY=1.3,NODE_W=260,GAP_Y=200;
 
 function short(type){return String(type).replace('@n8n/n8n-nodes-langchain.','').replace('n8n-nodes-base.','')}
@@ -89,7 +89,7 @@ function auditorBlock(reg,x,y,ids){
   const mk=(id,title,badge,ins,widgets,dy)=>({id,x,y:y+dy,w:360,title,badge,color:'#1f4e79',human:false,ins,outs:[],widgets:widgets.map(w=>({k:w[0],v:String(w[1])}))});
   const nodes=[
     mk('aud_wait','Awaiting a human','the gate · a person decides',[{name:'stopped at the gate',type:'gate'}],[['assets waiting',a.awaiting??'—'],['who decides','a named reviewer']],0),
-    mk('aud_reg','1 · AI-systems registry','voluntary · Art. 4',[{name:'from every workflow',type:'data'},{name:'uncovered',type:'alert'}],[['systems',st.length],['uncovered',cnt('uncovered')+cnt('likeness')],['need a decision',cnt('editorial')+cnt('verify')],['workflows scanned',reg?reg.instance_workflows:'—']],150),
+    mk('aud_reg','1 · AI-systems registry','voluntary · Art. 4',[{name:'from every workflow',type:'data'},{name:'uncovered',type:'alert'}],[['systems',st.length],['people not told',cnt('uncovered')+cnt('likeness')+cnt('inform')],['need a decision',cnt('editorial')+cnt('verify')+cnt('chatbot')],['workflows scanned',reg?reg.instance_workflows:'—']],150),
     mk('aud_media','2 · Synthetic media & deep fakes','Art. 50(4) §1 · 50(2)',[{name:'manifests',type:'creative'}],[['assets',a.media??'—'],['needs','label + consent + provenance']],360),
     mk('aud_text','3 · Generated text','Art. 50(4) §2',[{name:'manifests',type:'brief'}],[['texts',a.texts??'—'],['exception','named editor']],520),
     mk('aud_log','4 · Approval log','voluntary · Art. 26(6)-style',[{name:'decisions',type:'gate'}],[['decisions',a.approvals??'—'],['ledger',a.chain_ok===false?'chain BROKEN':a.chain_ok?'append-only · chain verified':'Postgres, append-only']],660),
@@ -134,7 +134,7 @@ function importN8n(files,opts){
     if(kitReturn){n.ins.push({name:'decision',type:'gate'});wires.push({id:'ret_'+wires.length,from:[kitReturn.id,0],to:[n.id,n.ins.length-1],kind:'fb',flow:3})}}
   if(reg){for(const r of reg.systems||[]){if(r.source!=='workflow node')continue;const n=nodes.find(n=>n._wf===r.workflow&&n._name===r.system);if(!n)continue;
     n.badge=r.path_status;n.color=STATUS_COLOR[r.path_status]||n.color;
-    if(r.path_status==='uncovered'||r.path_status==='likeness'){n.outs.push({name:'uncovered',type:'alert'});wires.push({id:'al_'+wires.length,from:[n.id,n.outs.length-1],to:['aud_reg',1],kind:'',flow:3})}
+    if(r.path_status==='uncovered'||r.path_status==='likeness'||r.path_status==='inform'){n.outs.push({name:'uncovered',type:'alert'});wires.push({id:'al_'+wires.length,from:[n.id,n.outs.length-1],to:['aud_reg',1],kind:'',flow:3})}
     n.widgets=[{k:'status',v:r.path_status}].concat(n.widgets).slice(0,4);}}
   const wireTo=(name,to,inIdx)=>{const n=nodes.find(n=>n._name===name&&/transparency kit$/i.test(n._wf||''));if(n){wires.push({id:'au_'+wires.length,from:[n.id,0],to:[to,inIdx||0],kind:'',flow:3})}};
   wireTo('Store asset','aud_wait');wireTo('Store asset','aud_media');wireTo('Store asset','aud_text');wireTo('Record decision','aud_log');wireTo('Snapshot registry','aud_reg',0);
