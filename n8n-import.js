@@ -24,11 +24,12 @@ function classify(n,kitId){
   const loop=/splitInBatches$/.test(t), iff=/n8n-nodes-base\.if$/.test(t), sw=/n8n-nodes-base\.switch$/.test(t);
   let outType='data';
   if(gen)outType=VIDEO.test(t+url+n.name)?'video':AUDIO.test(t+url+n.name)?'video':IMAGE.test(t+url+n.name)?'creative':'brief';
-  if(gate)outType='gate';
+  if(gate||notify)outType='gate';
   if(exit)outType='data';
+  const notify=/notify|reviewer/i.test(n.name)&&/slack|gmail|telegram|email|discord|teams/i.test(t);
   let color=C.generic;
-  if(trig)color=C.input; if(gen)color=C.engine; if(/code$|crypto$|set$/.test(t))color=C.generic; if(gate)color=C.qa; if(exit)color=C.launch; if(isKit)color=C.agent; if(loop||iff||sw)color=C.learn;
-  return {isKit,gen,gate,exit,trig,loop,iff,sw,outType,color,human:gate&&!isKit};
+  if(trig)color=C.input; if(gen)color=C.engine; if(/code$|crypto$|set$/.test(t))color=C.generic; if(gate||notify)color=C.qa; if(exit)color=C.launch; if(isKit)color=C.agent; if(loop||iff||sw)color=C.learn;
+  return {isKit,gen,gate,exit,trig,loop,iff,sw,notify,outType,color,human:(gate&&!isKit)||notify};
 }
 function outsOf(n,c,wf){
   if(c.iff)return[['true','gate'],['false','gate']];
@@ -87,11 +88,11 @@ function auditorBlock(reg,x,y,ids){
   const a=reg&&reg.audit||{};
   const mk=(id,title,badge,ins,widgets,dy)=>({id,x,y:y+dy,w:360,title,badge,color:'#1f4e79',human:false,ins,outs:[],widgets:widgets.map(w=>({k:w[0],v:String(w[1])}))});
   const nodes=[
-    mk('aud_wait','Awaiting a human','Art. 14 · the gate',[{name:'stopped at the gate',type:'gate'}],[['assets waiting',a.awaiting??'—'],['who decides','a named reviewer']],0),
-    mk('aud_reg','1 · AI-systems registry','Art. 4',[{name:'from every workflow',type:'data'},{name:'uncovered',type:'alert'}],[['systems',st.length],['uncovered',cnt('uncovered')+cnt('likeness')],['need a decision',cnt('editorial')+cnt('verify')],['workflows scanned',reg?reg.instance_workflows:'—']],150),
+    mk('aud_wait','Awaiting a human','the gate · a person decides',[{name:'stopped at the gate',type:'gate'}],[['assets waiting',a.awaiting??'—'],['who decides','a named reviewer']],0),
+    mk('aud_reg','1 · AI-systems registry','voluntary · Art. 4',[{name:'from every workflow',type:'data'},{name:'uncovered',type:'alert'}],[['systems',st.length],['uncovered',cnt('uncovered')+cnt('likeness')],['need a decision',cnt('editorial')+cnt('verify')],['workflows scanned',reg?reg.instance_workflows:'—']],150),
     mk('aud_media','2 · Synthetic media & deep fakes','Art. 50(4) §1 · 50(2)',[{name:'manifests',type:'creative'}],[['assets',a.media??'—'],['needs','label + consent + provenance']],360),
     mk('aud_text','3 · Generated text','Art. 50(4) §2',[{name:'manifests',type:'brief'}],[['texts',a.texts??'—'],['exception','named editor']],520),
-    mk('aud_log','4 · Approval log','Art. 14 · Art. 12 voluntary',[{name:'decisions',type:'gate'}],[['decisions',a.approvals??'—'],['keeps','who · what · when · why']],660),
+    mk('aud_log','4 · Approval log','voluntary · Art. 26(6)-style',[{name:'decisions',type:'gate'}],[['decisions',a.approvals??'—'],['keeps','who · what · when · why']],660),
   ];
   return {nodes,rect:{x:x-40,y:y-70,w:440,h:860}};
 }
