@@ -21,12 +21,12 @@ function classify(n,kitId){
   const gate=isKit||GATE_TYPE.test(t)||GATE_OP.test(String(p.operation||''))||GATE_OP.test(String(p.resource||''));
   const exit=EXIT_TYPE.test(t)||/\[exit\]/i.test(n.name);
   const trig=TRIGGER.test(t);
+  const notify=/notify|reviewer/i.test(n.name)&&/slack|gmail|telegram|email|discord|teams/i.test(t);
   const loop=/splitInBatches$/.test(t), iff=/n8n-nodes-base\.if$/.test(t), sw=/n8n-nodes-base\.switch$/.test(t);
   let outType='data';
   if(gen)outType=VIDEO.test(t+url+n.name)?'video':AUDIO.test(t+url+n.name)?'video':IMAGE.test(t+url+n.name)?'creative':'brief';
   if(gate||notify)outType='gate';
   if(exit)outType='data';
-  const notify=/notify|reviewer/i.test(n.name)&&/slack|gmail|telegram|email|discord|teams/i.test(t);
   let color=C.generic;
   if(trig)color=C.input; if(gen)color=C.engine; if(/code$|crypto$|set$/.test(t))color=C.generic; if(gate||notify)color=C.qa; if(exit)color=C.launch; if(isKit)color=C.agent; if(loop||iff||sw)color=C.learn;
   return {isKit,gen,gate,exit,trig,loop,iff,sw,notify,outType,color,human:(gate&&!isKit)||notify};
