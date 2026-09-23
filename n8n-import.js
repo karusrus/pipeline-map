@@ -142,9 +142,9 @@ function importN8n(files,opts){
   for(const n of nodes){delete n._cls;delete n._wf;delete n._name}
   snap();S.groups=groups;S.nodes=nodes;S.wires=wires;S.notes=notes;
   // camera slots: 1 = everything, then one per group, last = the auditor
-  const r=vp.getBoundingClientRect();const slot=g=>({cx:g.x+g.w/2,cy:g.y+g.h/2,k:Math.min(1,Math.max(.12,Math.min(r.width/(g.w+120),r.height/(g.h+160))))});
+  const r=vp.getBoundingClientRect();const slot=g=>({x:g.x-60,y:g.y-60,w:g.w+120,h:g.h+120,maxK:1});
   const ga=groups.find(g=>g.id==='g_auditor'),gv=groups.find(g=>g.id==='g_audit');const right=gv?{x:Math.min(ga.x,gv.x),y:ga.y,w:Math.max(ga.x+ga.w,gv.x+gv.w)-Math.min(ga.x,gv.x),h:gv.y+gv.h-ga.y}:ga;
-  S.slots={1:'fit'};let s=2;for(const g of groups){if(g.id==='g_auditor'||g.id==='g_audit')continue;if(s>4)break;S.slots[s++]=slot(g)}S.slots[5]=slot(right);
+  S.slots={1:'fit'};S.slotNames={1:'Overview'};let s=2;for(const g of groups){if(g.id==='g_auditor'||g.id==='g_audit')continue;if(s>4)break;S.slotNames[s]=String(g.title).split('  ·  ')[0];S.slots[s++]=slot(g)}S.slots[5]=slot(right);S.slotNames[5]='What the auditor reads';if(typeof setScene==='function')setScene(null,null);
   save();build();fit();renderSlots();toast(`Imported ${wfs.length} workflow${wfs.length>1?'s':''}${reg?' + registry':''}`);return true;
 }
 

@@ -13,6 +13,22 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:va
 #viewport.panning{cursor:grabbing}
 #world{position:absolute;left:0;top:0;transform-origin:0 0;width:0;height:0}
 #world.anim{transition:transform .9s cubic-bezier(.4,0,.2,1)}
+#world{--k:1}
+#world.anim .node .title,#world.anim .group .gt{transition:font-size .9s cubic-bezier(.4,0,.2,1)}
+/* titles stay readable when the camera is far out: world-size grows as the zoom shrinks */
+.node .title{font-size:clamp(15px,calc(12px / var(--k)),29px)!important}
+.group .gt{font-size:clamp(22px,calc(12px / var(--k)),34px)!important}
+#world.far .node .title .badge{display:none}
+#world.far .node .body{opacity:.3}
+.node,.group,.note{transition:opacity .4s}
+.node.dim,.note.dim{opacity:.18}
+.group.dim{opacity:.3}
+#scene{position:absolute;left:50%;bottom:90px;transform:translateX(-50%);z-index:25;background:rgba(17,17,17,.9);border:1px solid #3a3a3a;border-radius:12px;padding:10px 18px;display:flex;gap:12px;align-items:baseline;opacity:0;transition:opacity .35s;pointer-events:none;white-space:nowrap;max-width:calc(100% - 32px)}
+#scene.on{opacity:1;pointer-events:auto}
+#scene .n{color:var(--accent);font:600 13px "IBM Plex Mono",monospace}
+#scene b{font-size:22px;font-weight:600;color:#fff;overflow:hidden;text-overflow:ellipsis}
+#app.pres #scene{bottom:28px}
+#slots .btn.cur{border-color:var(--accent)}
 #app.pres #bar,#app.pres #hint,#app.pres #legend,#app.pres #slots{display:none}
 #slots{position:absolute;right:16px;top:14px;z-index:20;display:flex;gap:6px}
 #slots .btn{min-width:34px;text-align:center;padding:8px 9px}
@@ -54,7 +70,7 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:va
 .note{position:absolute;background:#2b2b22;border:1px solid #4a4a30;color:#d8d3a0;border-radius:8px;padding:10px 14px;font-size:13px;line-height:1.45;z-index:3;cursor:move}
 .note.sel{outline:2px solid var(--accent)}
 .note code{font-family:"IBM Plex Mono",monospace;font-size:12px}
-#bar{position:absolute;left:16px;top:14px;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 32px)}
+#bar{position:absolute;left:16px;top:14px;z-index:20;display:flex;gap:8px;align-items:center;flex-wrap:wrap;max-width:calc(100% - 260px)}
 #bar .brand{background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:8px 14px;display:flex;flex-direction:column;gap:2px;margin-right:6px}
 #bar .brand b{font-size:15px;color:#fff}
 #bar .brand span{font-size:11.5px;color:var(--muted)}
@@ -68,6 +84,11 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:va
 #zoomlbl{min-width:52px;text-align:center;color:var(--muted);font-variant-numeric:tabular-nums}
 #hint{position:absolute;left:16px;bottom:14px;z-index:20;background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:9px 14px;font-size:12.5px;color:var(--muted);max-width:calc(100% - 32px);line-height:1.5}
 #hint b{color:#ddd;font-weight:600}
+#hint{cursor:pointer;max-width:min(calc(100% - 32px),720px)}
+@media (min-width:721px){#hint:not(.open){max-width:calc(100% - 600px)}}
+#hint:not(.open) .more{display:none}
+#hint.open .short{display:none}
+#hint .key{color:var(--accent)}
 #legend{position:absolute;right:16px;bottom:14px;z-index:20;background:var(--panel);border:1px solid var(--panel-edge);border-radius:10px;padding:10px 14px;font-size:12.5px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
 #legend span{display:inline-flex;align-items:center;gap:6px;color:#ccc}
 #legend i{width:22px;height:4px;border-radius:2px;display:inline-block}
@@ -79,7 +100,8 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:va
 #modal textarea{width:100%;height:50vh;background:#151515;color:#ddd;border:1px solid #333;border-radius:8px;padding:10px;font-family:"IBM Plex Mono",monospace;font-size:12px;resize:vertical}
 #modal .actions{display:flex;gap:8px;justify-content:flex-end}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (max-width:720px){#legend{display:none}#bar .brand span{display:none}}
+@media (max-width:1600px){#bar .brand span{display:none}}
+@media (max-width:720px){#legend{display:none}}
 </style></head><body>
 <div id="app">
   <div id="viewport">
@@ -99,10 +121,11 @@ html,body{height:100%;margin:0;overflow:hidden;background:var(--canvas);color:va
     <button class="btn warn" id="reset" title="Discard your edits and reload the original draft">Reset draft</button>
   </div>
   <div id="slots" title="Camera slots: click to fly there, Shift+click (or Shift+1–5) to save the current view"></div>
-  <div id="hint"><b>Pan</b> drag the canvas · <b>Zoom</b> wheel or pinch · <b>Move</b> drag a node title or group title (a group carries its nodes) · <b>Rename</b> double-click any text · <b>Connect</b> drag from an output dot to an input dot · <b>Delete</b> select a node, note or wire, press Delete · <b>Undo</b> Ctrl+Z · <b>Flow</b> animates the traffic; select a wire and press 1, 2 or 3 to set how much runs through it · <b>Camera</b> keys 1–5 fly to a saved view, Shift+1–5 save the current one · <b>H</b> hides this chrome for recording · <b>Import n8n</b> lays out n8n workflow JSON (drop the files on the canvas; add the Transparency Kit registry to paint statuses) · sample: an ad-creative production pipeline for a subscription app · by <a href="https://karusrus.github.io" style="color:#ddd">Ruslan Karymov</a></div>
+  <div id="hint" title="Click for all controls"><span class="short"><b>1–5</b> scenes · <b>0</b> overview · <b>H</b> hide controls · <span class="key">? help</span> · by <a href="https://karusrus.github.io" style="color:#ddd">Ruslan Karymov</a></span><span class="more"><b>Pan</b> drag the canvas · <b>Zoom</b> wheel or pinch · <b>Move</b> drag a node title or group title (a group carries its nodes) · <b>Rename</b> double-click any text · <b>Connect</b> drag from an output dot to an input dot · <b>Delete</b> select a node, note or wire, press Delete · <b>Undo</b> Ctrl+Z · <b>Flow</b> animates the traffic; select a wire and press 1, 2 or 3 to set how much runs through it · <b>Camera</b> keys 1–5 fly to a scene, 0 back to the overview, Shift+1–5 save the current view; double-click a slot button or the scene caption to name it · <b>H</b> hides this chrome for recording · <b>Import n8n</b> lays out n8n workflow JSON (drop the files on the canvas; add the Transparency Kit registry to paint statuses) · sample: an ad-creative production pipeline for a subscription app · by <a href="https://karusrus.github.io" style="color:#ddd">Ruslan Karymov</a> · <span class="key">click to collapse</span></span></div>
   <div id="legend">
     <span><i style="background:var(--t-data)"></i>data</span><span><i style="background:var(--t-brief)"></i>brief / copy</span><span><i style="background:var(--t-creative)"></i>static</span><span><i style="background:var(--t-video)"></i>video</span><span><i style="background:var(--t-brand)"></i>brand</span><span><i style="background:var(--t-gate)"></i>gate</span><span><i style="background:var(--t-fb);height:0;border-top:2px dashed var(--t-fb)"></i>feedback</span><span><i style="background:var(--t-alert)"></i>uncovered</span>
   </div>
+  <div id="scene"><span class="n"></span><b title="Double-click to rename this scene"></b></div>
   <div id="toast"></div>
   <div id="modal"><div class="box"><div><b>Layout as JSON</b> — copy it to keep a version, or paste one here and import.</div><textarea id="jsontext" spellcheck="false"></textarea><div class="actions"><button class="btn" id="copyjson">Copy</button><button class="btn" id="importjson">Import</button><button class="btn" id="closejson">Close</button></div></div></div>
 </div>
@@ -180,6 +203,10 @@ const T={data:'#6BCB77',brief:'#FFD166',creative:'#FF9F43',video:'#F368E0',brand
 C.generic='#444';
 const ROW=24,TITLE=32,PAD=6;
 const LS='pipeline-map-v1';
+// camera scenes: world rectangles fitted to whatever screen plays them; one per stage of the sample story
+const DEFAULT_SLOTS={1:{x:10,y:70,w:440,h:1530},2:{x:420,y:70,w:480,h:1010},3:{x:870,y:70,w:1060,h:1260},4:{x:1900,y:70,w:460,h:1520},5:{x:2330,y:70,w:660,h:1520}};
+const DEFAULT_SLOT_NAMES={1:'Inputs',2:'Decisions',3:'Production',4:'Human gates',5:'Feedback'};
+const OLD_DEFAULT_SLOTS='{"1":{"cx":660,"cy":930,"k":1.3},"2":"fit","3":{"cx":2660,"cy":1170,"k":0.85},"4":{"cx":1400,"cy":640,"k":0.75},"5":{"cx":2130,"cy":1300,"k":1.1}}';
 const SPINE=new Set(['perf>merge','merge>gen','gen>pc1','pc1>human1','human1>compose','compose>brandqa','brandqa>pc2','pc2>l10n','l10n>human2','human2>name','name>upload','upload>read','read>rule','read>perf']);
 function defaultState(){
   return {
@@ -187,16 +214,19 @@ function defaultState(){
     nodes:DEFAULT_NODES.map(n=>({id:n.id,x:n.x,y:n.y,w:n.w,title:n.t,badge:n.badge||'',color:n.c,human:!!n.human,ins:n.ins.map(a=>({name:a[0],type:a[1]})),outs:n.outs.map(a=>({name:a[0],type:a[1]})),widgets:(n.w_||[]).map(w=>({k:w[0],v:w[1]}))})),
     wires:DEFAULT_WIRES.map((w,i)=>({id:'w'+i,from:[w[0],w[1]],to:[w[2],w[3]],kind:w[4]==='fb'?'fb':'',flow:SPINE.has(w[0]+'>'+w[2])?3:(w[4]==='fb'?1:2)})),
     notes:DEFAULT_NOTES.map((n,i)=>({id:'n'+i,x:n.x,y:n.y,w:n.w,html:n.html})),
-    view:{x:40,y:80,k:0.5,flow:true}
+    view:{x:40,y:80,k:0.5,flow:true},
+    slots:JSON.parse(JSON.stringify(DEFAULT_SLOTS)),slotNames:Object.assign({},DEFAULT_SLOT_NAMES)
   };
 }
 let S; try{const raw=localStorage.getItem(LS); S=raw?JSON.parse(raw):null;}catch(e){S=null}
 if(!S||!S.nodes) S=defaultState();
+if(!S.slots||JSON.stringify(S.slots)===OLD_DEFAULT_SLOTS){S.slots=JSON.parse(JSON.stringify(DEFAULT_SLOTS));S.slotNames=Object.assign({},DEFAULT_SLOT_NAMES)}
+if(!S.slotNames)S.slotNames={};
 const hist=[]; function snap(){hist.push(JSON.stringify({groups:S.groups,nodes:S.nodes,wires:S.wires,notes:S.notes})); if(hist.length>60)hist.shift();}
 function save(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
 const vp=document.getElementById('viewport'),world=document.getElementById('world'),svg=document.getElementById('wires'),tmp=document.getElementById('temp');
 const els={};
-function applyView(){world.style.transform=`translate(${S.view.x}px,${S.view.y}px) scale(${S.view.k})`;document.getElementById('zoomlbl').textContent=Math.round(S.view.k*100)+'%';}
+function applyView(){world.style.transform=`translate(${S.view.x}px,${S.view.y}px) scale(${S.view.k})`;world.style.setProperty('--k',S.view.k);world.classList.toggle('far',S.view.k<0.6);document.getElementById('zoomlbl').textContent=Math.round(S.view.k*100)+'%';}
 function toWorld(sx,sy){const r=vp.getBoundingClientRect();return [(sx-r.left-S.view.x)/S.view.k,(sy-r.top-S.view.y)/S.view.k]}
 function node(id){return S.nodes.find(n=>n.id===id)}
 function sockIn(n,i){return [n.x+11,n.y+TITLE+PAD+12+i*ROW]}
@@ -244,7 +274,7 @@ function build(){
     d.addEventListener('keydown',e=>{if(e.key==='Escape')d.blur();e.stopPropagation()});
     world.appendChild(d);els[nt.id]=d;
   }
-  draw();
+  applyDim();
 }
 function wirePath(p1,p2,kind){
   if(p2[0]<p1[0]){const yv=Math.max(p1[1],p2[1])+(kind==='fb'?120:60);return `M${p1[0]},${p1[1]} C${p1[0]+120},${p1[1]} ${p1[0]+120},${yv} ${p1[0]-60},${yv} L${p2[0]+60},${yv} C${p2[0]-120},${yv} ${p2[0]-120},${p2[1]} ${p2[0]},${p2[1]}`}
@@ -255,9 +285,9 @@ function draw(){
   for(const w of S.wires){
     const a=node(w.from[0]),b=node(w.to[0]);if(!a||!b||!a.outs[w.from[1]]||!b.ins[w.to[1]])continue;
     const p1=sockOut(a,w.from[1]),p2=sockIn(b,w.to[1]);const col=w.kind==='fb'?T.fb:(T[a.outs[w.from[1]].type]||'#888');
-    const d=wirePath(p1,p2,w.kind);const sel=sel_.type==='wire'&&sel_.id===w.id;
-    s+=`<path class="hit" data-id="${w.id}" d="${d}" fill="none"/><path id="p_${w.id}" class="wire${sel?' sel':''}" d="${d}" fill="none" stroke="${col}" stroke-width="${sel?4.5:(w.kind==='fb'?2.5:3)}" ${w.kind==='fb'?'stroke-dasharray="10 7"':''} opacity="${flowOn?.45:.85}"/>`;
-    if(flowOn){const f=w.flow||(w.kind==='fb'?1:2);const len=Math.abs(p2[0]-p1[0])+Math.abs(p2[1]-p1[1])+(p2[0]<p1[0]?400:0);const dur=Math.max(1.2,len/(90*f));
+    const d=wirePath(p1,p2,w.kind);const sel=sel_.type==='wire'&&sel_.id===w.id;const on=!focus||focus.has(a.id)||focus.has(b.id);
+    s+=`<path class="hit" data-id="${w.id}" d="${d}" fill="none"/><path id="p_${w.id}" class="wire${sel?' sel':''}" d="${d}" fill="none" stroke="${col}" stroke-width="${sel?4.5:(w.kind==='fb'?2.5:3)}" ${w.kind==='fb'?'stroke-dasharray="10 7"':''} opacity="${on?(flowOn?.45:.85):.07}"/>`;
+    if(flowOn&&on){const f=w.flow||(w.kind==='fb'?1:2);const len=Math.abs(p2[0]-p1[0])+Math.abs(p2[1]-p1[1])+(p2[0]<p1[0]?400:0);const dur=Math.max(1.2,len/(90*f));
       s+=`<path class="flowdash" d="${d}" fill="none" stroke="${col}" stroke-width="${1.5+f}" stroke-linecap="round" stroke-dasharray="${4+f*2} ${22-4-f*2}" style="animation-duration:${(dur/ (len/22)).toFixed(3)}s"/>`;
       for(let i=0;i<f;i++)s+=`<circle class="p" r="${3+f*0.7}" fill="#fff" stroke="${col}" stroke-width="2"><animateMotion dur="${dur.toFixed(2)}s" begin="${(-i*dur/f).toFixed(2)}s" repeatCount="indefinite" rotate="auto"><mpath href="#p_${w.id}"/></animateMotion></circle>`;}
   }
@@ -299,10 +329,10 @@ function startWire(e,n,i){
 // pan & zoom
 let pan=null;
 vp.addEventListener('pointerdown',e=>{if(e.target!==vp&&e.target!==world&&e.target!==svg)return;select(null,null);pan={x:e.clientX,y:e.clientY,vx:S.view.x,vy:S.view.y};vp.classList.add('panning');vp.setPointerCapture(e.pointerId)});
-vp.addEventListener('pointermove',e=>{if(!pan)return;S.view.x=pan.vx+(e.clientX-pan.x);S.view.y=pan.vy+(e.clientY-pan.y);applyView()});
+vp.addEventListener('pointermove',e=>{if(!pan)return;autoFit=false;S.view.x=pan.vx+(e.clientX-pan.x);S.view.y=pan.vy+(e.clientY-pan.y);applyView()});
 const endPan=()=>{if(pan){pan=null;vp.classList.remove('panning');save()}};
 vp.addEventListener('pointerup',endPan);vp.addEventListener('pointercancel',endPan);
-function zoomAt(f,cx,cy){const r=vp.getBoundingClientRect();const sx=cx-r.left,sy=cy-r.top;const k=Math.min(3,Math.max(0.12,S.view.k*f));const ratio=k/S.view.k;S.view.x=sx-(sx-S.view.x)*ratio;S.view.y=sy-(sy-S.view.y)*ratio;S.view.k=k;applyView();save();}
+function zoomAt(f,cx,cy){autoFit=false;const r=vp.getBoundingClientRect();const sx=cx-r.left,sy=cy-r.top;const k=Math.min(3,Math.max(0.12,S.view.k*f));const ratio=k/S.view.k;S.view.x=sx-(sx-S.view.x)*ratio;S.view.y=sy-(sy-S.view.y)*ratio;S.view.k=k;applyView();save();}
 vp.addEventListener('wheel',e=>{e.preventDefault();const f=e.ctrlKey?Math.exp(-e.deltaY*0.01):(e.deltaY<0?1.12:1/1.12);zoomAt(f,e.clientX,e.clientY)},{passive:false});
 // pinch
 const pts=new Map();let pinch=null;
@@ -310,17 +340,43 @@ vp.addEventListener('pointerdown',e=>{pts.set(e.pointerId,[e.clientX,e.clientY])
 vp.addEventListener('pointermove',e=>{if(!pts.has(e.pointerId))return;pts.set(e.pointerId,[e.clientX,e.clientY]);if(pinch&&pts.size===2){const a=[...pts.values()];const d=Math.hypot(a[0][0]-a[1][0],a[0][1]-a[1][1]);zoomAt(d/pinch.d,(a[0][0]+a[1][0])/2,(a[0][1]+a[1][1])/2);pinch.d=d}},true);
 const clearPt=e=>{pts.delete(e.pointerId);if(pts.size<2)pinch=null};
 vp.addEventListener('pointerup',clearPt,true);vp.addEventListener('pointercancel',clearPt,true);
-const DEFAULT_SLOTS={1:{cx:660,cy:930,k:1.3},2:'fit',3:{cx:2660,cy:1170,k:0.85},4:{cx:1400,cy:640,k:0.75},5:{cx:2130,cy:1300,k:1.1}};
-if(!S.slots)S.slots=JSON.parse(JSON.stringify(DEFAULT_SLOTS));
 function animateTo(fn){world.classList.add('anim');fn();setTimeout(()=>world.classList.remove('anim'),950);}
 function centerOn(cx,cy,k){const r=vp.getBoundingClientRect();S.view.k=k;S.view.x=r.width/2-cx*k;S.view.y=r.height/2-cy*k;applyView();save();}
-function gotoSlot(n){const v=S.slots[n];if(!v){toast('Slot '+n+' is empty — Shift+'+n+' saves the current view');return}animateTo(()=>{if(v==='fit')fit();else centerOn(v.cx,v.cy,v.k)});}
-function saveSlot(n){const r=vp.getBoundingClientRect();S.slots[n]={cx:(r.width/2-S.view.x)/S.view.k,cy:(r.height/2-S.view.y)/S.view.k,k:S.view.k};save();renderSlots();toast('View saved to '+n);}
-function renderSlots(){const el=document.getElementById('slots');el.innerHTML='';for(let i=1;i<=5;i++){const b=document.createElement('button');b.className='btn'+(S.slots[i]?' has':'');b.textContent=i;b.title=S.slots[i]===undefined?'Empty — Shift+click to save':'Fly here · Shift+click to overwrite';b.onclick=e=>{if(e.shiftKey)saveSlot(i);else gotoSlot(i)};el.appendChild(b)}}
-function fit(){const xs=[],ys=[];for(const g of S.groups){xs.push(g.x,g.x+g.w);ys.push(g.y,g.y+g.h)}for(const n of S.nodes){xs.push(n.x,n.x+n.w);ys.push(n.y,n.y+240)}for(const n of S.notes){xs.push(n.x,n.x+n.w);ys.push(n.y,n.y+120)}
-  if(!xs.length)return;const minx=Math.min(...xs)-40,maxx=Math.max(...xs)+40,miny=Math.min(...ys)-100,maxy=Math.max(...ys)+80;const r=vp.getBoundingClientRect();
-  const k=Math.min(3,Math.max(0.12,Math.min(r.width/(maxx-minx),r.height/(maxy-miny))));S.view.k=k;S.view.x=(r.width-(maxx-minx)*k)/2-minx*k;S.view.y=(r.height-(maxy-miny)*k)/2-miny*k;applyView();save();}
-document.getElementById('fit').onclick=fit;
+// the part of the viewport not covered by the controls (and by the scene caption)
+function insets(caption){const app=document.getElementById('app'),vr=vp.getBoundingClientRect();
+  if(app.classList.contains('pres'))return{t:24,r:24,l:24,b:caption?92:24};
+  const top=Math.max(document.getElementById('bar').getBoundingClientRect().bottom,document.getElementById('slots').getBoundingClientRect().bottom)-vr.top+16;
+  let low=vr.bottom;for(const id of ['hint','legend']){const b=document.getElementById(id).getBoundingClientRect();if(b.height)low=Math.min(low,b.top)}
+  return{t:top,l:24,r:24,b:vr.bottom-low+16+(caption?62:0)};}
+function fitRect(rc,caption,maxK){const r=vp.getBoundingClientRect(),I=insets(caption);const aw=Math.max(80,r.width-I.l-I.r),ah=Math.max(80,r.height-I.t-I.b);
+  const k=Math.min(maxK||3,Math.max(0.12,Math.min(aw/rc.w,ah/rc.h)));S.view.k=k;S.view.x=I.l+(aw-rc.w*k)/2-rc.x*k;S.view.y=I.t+(ah-rc.h*k)/2-rc.y*k;applyView();save();}
+// scene focus: nodes whose centre lies inside the scene stay lit, the rest and their wires fade
+let focus=null,focusRect=null,curSlot=null,autoFit=false;
+function nodeBox(n){const h=els[n.id]?els[n.id].offsetHeight:120;return{x:n.x,y:n.y,w:n.w,h}}
+function inRect(b,rc){const cx=b.x+b.w/2,cy=b.y+b.h/2;return cx>=rc.x&&cx<=rc.x+rc.w&&cy>=rc.y&&cy<=rc.y+rc.h}
+function overlap(g,rc){const w=Math.max(0,Math.min(g.x+g.w,rc.x+rc.w)-Math.max(g.x,rc.x)),h=Math.max(0,Math.min(g.y+g.h,rc.y+rc.h)-Math.max(g.y,rc.y));return w*h/Math.max(1,g.w*g.h)}
+function applyDim(){focus=focusRect?new Set(S.nodes.filter(n=>inRect(nodeBox(n),focusRect)).map(n=>n.id)):null;
+  for(const n of S.nodes)els[n.id]&&els[n.id].classList.toggle('dim',!!focus&&!focus.has(n.id));
+  for(const g of S.groups)els[g.id]&&els[g.id].classList.toggle('dim',!!focusRect&&overlap(g,focusRect)<0.3);
+  for(const nt of S.notes)els[nt.id]&&els[nt.id].classList.toggle('dim',!!focusRect&&!inRect({x:nt.x,y:nt.y,w:nt.w,h:els[nt.id].offsetHeight},focusRect));
+  draw();}
+function setScene(n,rc){curSlot=n;focusRect=rc||null;const name=n&&S.slotNames[n];const sc=document.getElementById('scene');
+  if(name){sc.querySelector('.n').textContent=n;sc.querySelector('b').textContent=name;sc.classList.add('on')}else sc.classList.remove('on');
+  if(!document.getElementById('app').classList.contains('pres')){const hb=document.getElementById('hint').getBoundingClientRect(),vr=vp.getBoundingClientRect();sc.style.bottom=(vr.bottom-hb.top+14)+'px'}else sc.style.bottom='';
+  applyDim();renderSlots();}
+function slotRect(v){if(v.w)return v;const r=vp.getBoundingClientRect();return{x:v.cx-r.width/2/v.k,y:v.cy-r.height/2/v.k,w:r.width/v.k,h:r.height/v.k}}
+function overview(){setScene(null,null);animateTo(fit)}
+function gotoSlot(n){const v=S.slots[n];if(!v){toast('Slot '+n+' is empty — Shift+'+n+' saves the current view');return}
+  if(v==='fit'){setScene(n,null);animateTo(fit);return}
+  const rc=slotRect(v);setScene(n,rc);animateTo(()=>{if(v.w)fitRect(v,!!S.slotNames[n],v.maxK);else centerOn(v.cx,v.cy,v.k)});}
+function saveSlot(n){const r=vp.getBoundingClientRect(),I=insets(!!S.slotNames[n]),k=S.view.k;S.slots[n]={x:(I.l-S.view.x)/k,y:(I.t-S.view.y)/k,w:(r.width-I.l-I.r)/k,h:(r.height-I.t-I.b)/k};save();renderSlots();toast('View saved to '+n+(S.slotNames[n]?' · '+S.slotNames[n]:' — double-click the button to name it'));}
+function nameSlot(n){const v=prompt('Scene name for slot '+n+' (shown to the audience)',S.slotNames[n]||'');if(v===null)return;if(v.trim())S.slotNames[n]=v.trim();else delete S.slotNames[n];save();if(curSlot===n)setScene(n,focusRect);else renderSlots()}
+function renderSlots(){const el=document.getElementById('slots');el.innerHTML='';for(let i=1;i<=5;i++){const b=document.createElement('button');b.className='btn'+(S.slots[i]?' has':'')+(curSlot===i?' cur':'');b.textContent=i;const nm=S.slotNames[i];b.title=(nm?nm+' — ':'')+(S.slots[i]===undefined?'empty, Shift+click to save':'click to fly here, Shift+click to overwrite, double-click to name');b.onclick=e=>{if(e.shiftKey)saveSlot(i);else gotoSlot(i)};b.ondblclick=e=>{e.preventDefault();nameSlot(i)};el.appendChild(b)}}
+editable(document.querySelector('#scene b'),v=>{if(curSlot){if(v)S.slotNames[curSlot]=v;else delete S.slotNames[curSlot];setScene(curSlot,focusRect)}});
+function fit(){const xs=[],ys=[];for(const g of S.groups){xs.push(g.x,g.x+g.w);ys.push(g.y,g.y+g.h)}for(const n of S.nodes){xs.push(n.x,n.x+n.w);ys.push(n.y,n.y+nodeBox(n).h)}for(const n of S.notes){xs.push(n.x,n.x+n.w);ys.push(n.y,n.y+(els[n.id]?els[n.id].offsetHeight:120))}
+  if(!xs.length)return;const minx=Math.min(...xs)-30,maxx=Math.max(...xs)+30,miny=Math.min(...ys)-30,maxy=Math.max(...ys)+30;
+  fitRect({x:minx,y:miny,w:maxx-minx,h:maxy-miny},!!(curSlot&&S.slotNames[curSlot]));autoFit=true;}
+document.getElementById('fit').onclick=overview;
 document.getElementById('flow').onclick=()=>setFlow(!flowOn);
 document.getElementById('zin').onclick=()=>{const r=vp.getBoundingClientRect();zoomAt(1.25,r.left+r.width/2,r.top+r.height/2)};
 document.getElementById('zout').onclick=()=>{const r=vp.getBoundingClientRect();zoomAt(0.8,r.left+r.width/2,r.top+r.height/2)};
@@ -328,32 +384,39 @@ document.getElementById('addnode').onclick=()=>{snap();const r=vp.getBoundingCli
 document.getElementById('addnote').onclick=()=>{snap();const r=vp.getBoundingClientRect();const [x,y]=toWorld(r.left+r.width/2,r.top+r.height/2);const id='note'+Date.now();S.notes.push({id,x:Math.round(x/10)*10-160,y:Math.round(y/10)*10-40,w:320,html:'<b>Note.</b> Double-click to edit.'});save();build();select('note',id)};
 document.getElementById('undo').onclick=undo;
 function undo(){const h=hist.pop();if(!h){toast('Nothing to undo');return}const o=JSON.parse(h);Object.assign(S,o);sel_={type:null};save();build();toast('Undone')}
-document.getElementById('reset').onclick=()=>{if(!confirm('Discard your edits and reload the original draft?'))return;S=defaultState();hist.length=0;save();build();fit();toast('Original draft restored')};
+document.getElementById('reset').onclick=()=>{if(!confirm('Discard your edits and reload the original draft?'))return;S=defaultState();hist.length=0;save();setScene(null,null);build();fit();renderSlots();toast('Original draft restored')};
 const modal=document.getElementById('modal'),ta=document.getElementById('jsontext');
-document.getElementById('json').onclick=()=>{ta.value=JSON.stringify({groups:S.groups,nodes:S.nodes,wires:S.wires,notes:S.notes},null,1);modal.classList.add('on');ta.focus();ta.select()};
+document.getElementById('json').onclick=()=>{ta.value=JSON.stringify({groups:S.groups,nodes:S.nodes,wires:S.wires,notes:S.notes,slots:S.slots,slotNames:S.slotNames},null,1);modal.classList.add('on');ta.focus();ta.select()};
 document.getElementById('closejson').onclick=()=>modal.classList.remove('on');
 document.getElementById('copyjson').onclick=async()=>{try{await navigator.clipboard.writeText(ta.value);toast('Copied')}catch(e){ta.select();toast('Select all and copy manually')}};
-document.getElementById('importjson').onclick=()=>{try{const o=JSON.parse(ta.value);if(!o.nodes||!o.wires)throw 0;snap();S.groups=o.groups||[];S.nodes=o.nodes;S.wires=o.wires;S.notes=o.notes||[];save();build();fit();modal.classList.remove('on');toast('Imported')}catch(e){toast('That is not a valid layout JSON')}};
+document.getElementById('importjson').onclick=()=>{try{const o=JSON.parse(ta.value);if(!o.nodes||!o.wires)throw 0;snap();S.groups=o.groups||[];S.nodes=o.nodes;S.wires=o.wires;S.notes=o.notes||[];if(o.slots){S.slots=o.slots;S.slotNames=o.slotNames||{}}save();setScene(null,null);build();fit();renderSlots();modal.classList.remove('on');toast('Imported')}catch(e){toast('That is not a valid layout JSON')}};
 window.addEventListener('keydown',e=>{
   if(e.target.isContentEditable||e.target.tagName==='TEXTAREA')return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();undo();return}
-  if(e.key==='Escape'){select(null,null);modal.classList.remove('on')}
+  if(e.key==='Escape'){if(!sel_.type&&!modal.classList.contains('on')&&curSlot)setScene(null,null);select(null,null);modal.classList.remove('on')}
   if((e.key==='Delete'||e.key==='Backspace')&&sel_.type){e.preventDefault();
     if(sel_.type==='node')deleteNode(sel_.id);
     else if(sel_.type==='wire'){snap();S.wires=S.wires.filter(w=>w.id!==sel_.id);sel_={type:null};save();draw();toast('Wire deleted')}
     else if(sel_.type==='note'){snap();S.notes=S.notes.filter(n=>n.id!==sel_.id);sel_={type:null};save();build()}
     else if(sel_.type==='group'){snap();S.groups=S.groups.filter(g=>g.id!==sel_.id);sel_={type:null};save();build()}}
-  if(e.key==='f'||e.key==='F')fit();
+  if(e.key==='?'){document.getElementById('hint').click();return}
+  if(e.key==='f'||e.key==='F'||(e.key==='0'&&!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&sel_.type!=='wire'))overview();
   if(e.key==='a'||e.key==='A')setFlow(!flowOn);
-  if(e.key==='h'||e.key==='H'){document.getElementById('app').classList.toggle('pres');toast(document.getElementById('app').classList.contains('pres')?'Presentation mode — H to bring the controls back':'Controls back')}
+  if(e.key==='h'||e.key==='H'){document.getElementById('app').classList.toggle('pres');toast(document.getElementById('app').classList.contains('pres')?'Presentation mode — H to bring the controls back':'Controls back');if(curSlot)setScene(curSlot,focusRect)}
   if(!e.shiftKey&&!e.ctrlKey&&!e.metaKey&&sel_.type!=='wire'&&['1','2','3','4','5'].includes(e.key))gotoSlot(+e.key);
   if(e.shiftKey&&['!','@','#','$','%','1','2','3','4','5'].includes(e.key)){const m={'!':1,'@':2,'#':3,'$':4,'%':5};saveSlot(m[e.key]||+e.key)}
   if(sel_.type==='wire'&&['1','2','3'].includes(e.key)){snap();const w=S.wires.find(x=>x.id===sel_.id);if(w){w.flow=+e.key;save();draw();toast('Flow intensity '+e.key)}}
 });
-let toastT;function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1800)}
+let toastT;document.getElementById('hint').addEventListener('click',e=>{if(e.target.closest('a'))return;const h=document.getElementById('hint');h.classList.toggle('open');if(curSlot)setScene(curSlot,focusRect)});
+function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1800)}
 build();applyView();document.getElementById('flow').classList.toggle('on',flowOn);renderSlots();
-if(!localStorage.getItem||!(()=>{try{return localStorage.getItem(LS)}catch(e){return null}})())fit();
-window.addEventListener('resize',()=>{});
+// first view waits for the whole page: the n8n importer adds a button to the bar and the web fonts change its width
+{const fresh=!(()=>{try{return localStorage.getItem(LS)}catch(e){return null}})();const q=new URLSearchParams(location.search);
+ if(fresh)autoFit=true;
+ const first=()=>{if(q.get('import'))return;if(q.get('pres'))document.getElementById('app').classList.add('pres');if(q.get('flow')==='0')setFlow(false);
+  if(q.get('slot'))gotoSlot(+q.get('slot'));else if(fresh)fit()};
+ window.addEventListener('load',()=>{first();document.fonts&&document.fonts.ready.then(()=>{if(curSlot&&S.slots[curSlot]&&S.slots[curSlot].w)fitRect(S.slots[curSlot],!!S.slotNames[curSlot],S.slots[curSlot].maxK);else if(autoFit&&!curSlot)fit()})});}
+let rzT;window.addEventListener('resize',()=>{clearTimeout(rzT);rzT=setTimeout(()=>{if(curSlot&&S.slots[curSlot]&&S.slots[curSlot].w)fitRect(S.slots[curSlot],!!S.slotNames[curSlot],S.slots[curSlot].maxK);else if(autoFit)fit();if(curSlot)setScene(curSlot,focusRect)},150)});
 </script>
 <script src="n8n-import.js"></script>
 </body></html>
