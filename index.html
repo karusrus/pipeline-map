@@ -202,7 +202,8 @@ const DEFAULT_NOTES=[{"x": 930, "y": 1150, "w": 640, "html": "<b>Round 1</b> run
 const T={data:'#6BCB77',brief:'#FFD166',creative:'#FF9F43',video:'#F368E0',brand:'#B8B5FF',gate:'#54A0FF',fb:'#A29BFE',alert:'#FF5252'};
 C.generic='#444';
 const ROW=24,TITLE=32,PAD=6;
-const LS='pipeline-map-v1';
+// imports (?import=…) keep their own storage, so opening the plain canvas always shows the sample, not the last import
+const LS=new URLSearchParams(location.search).get('import')?'pipeline-map-import-v1':'pipeline-map-v2';
 // camera scenes: world rectangles fitted to whatever screen plays them; one per stage of the sample story
 const DEFAULT_SLOTS={1:{x:10,y:70,w:440,h:1530},2:{x:420,y:70,w:480,h:1010},3:{x:870,y:70,w:1060,h:1260},4:{x:1900,y:70,w:460,h:1520},5:{x:2330,y:70,w:660,h:1520}};
 const DEFAULT_SLOT_NAMES={1:'Inputs',2:'Decisions',3:'Production',4:'Human gates',5:'Feedback'};
